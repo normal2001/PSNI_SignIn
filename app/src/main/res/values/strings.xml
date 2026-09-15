@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="database_unavailable">Database unavailable. Check-in and check-out are paused. Open Settings, enter the admin passcode, and correct DATABASE_PATH in Application settings.</string>
+</resources>
