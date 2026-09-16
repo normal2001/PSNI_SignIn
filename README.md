@@ -15,22 +15,24 @@ Deployment defaults are defined in `app/build.gradle.kts` and exposed through
    administrator settings, the reason choices, and `useMockData` are supported.
 3. Sync Gradle and rebuild/run the **debug** variant after making changes.
 
-The personal file is ignored by Git. Commit the example, Gradle configuration,
-and `AppConfig.kt`. The legacy extensionless `AppConfig_test` file is also ignored
-but is not read by the build.
+This `AppConfig_test.properties` file is ignored by Git so your custom settings
+remain local only.
 
-Debug setting precedence is: the setting saved through the admin screen, then a
-local property, then the shared default. Local properties supply starting values;
-changes saved inside the app take priority and survive app restarts and normal
-rebuilds/reinstalls that retain app data. Previously saved settings also take
-priority, including settings saved before this change. Changing a local property
-requires rebuilding and installing the app; restarting the emulator app alone
-does not update it or erase saved settings. Reason choices and `useMockData` are
-build settings without saved admin overrides.
+Debug setting precedence: 
+  1. any settings saved through the admin screen
+  2. the `AppConfig_test.properties` settings
+  3. the app defaults. 
+
+The `AppConfig_test.properties` settings work as initial values for debugging, but 
+any changes saved inside the app take priority and survive app restarts and normal
+rebuilds/reinstalls that retain app data. The `REASON_OPTIONS` and `useMockData` are
+build settings without saved admin overrides. Changing local properties requires
+rebuilding and installing the app; restarting the emulator app alone does not update
+it or erase saved settings. 
 
 Release builds ignore the local properties file entirely. Release builds and debug
-builds without local overrides use empty connection credentials and disabled SMB
-export/Slack notifications by default. The default admin passcode remains `1234`.
+builds without local overrides use empty Slack connection credentials and disabled
+SMB fileshare exports by default. The default admin passcode remains `1234`.
 Previously saved settings take priority in both debug and release builds.
 
 Properties are read as UTF-8. Do not surround values with quotes. Use `\\` for a
@@ -39,25 +41,29 @@ literal backslash and `\n` for a newline. Separate `REASON_OPTIONS` with `|`.
 and the internal preference-store name are not customizable settings. Booleans must
 be `true` or `false`; unknown keys or invalid values cause a debug build error.
 `useMockData` only exposes a flag; the app currently has no mock-data implementation.
-
+ 
 Local credentials are excluded from source control, but are included in your debug
 APK. If credentials previously committed to Git were real, rotate them; ignoring a
 file does not remove credentials from earlier commits.
 
 ### Android local-path behavior
 
-If the database cannot be opened at startup, the home page displays a warning and
-disables check-in/check-out. The Settings button and admin passcode remain usable;
-login opens Application settings directly. Visitor records and CSV export are
-unavailable until database access is restored. Save a corrected `DATABASE_PATH`
-to retry immediately. Failed attempts keep settings accessible. A successful retry
-opens or creates the database and re-enables check-in/check-out when you return Home.
-Existing records are not copied from the old database. Changing the path while a
-working database is already open still requires a full app restart.
+If the SQLite database file cannot be opened at startup, the home page displays a
+warning and disables check-in/check-out. The Settings button and admin passcode 
+remain usable; login opens Application settings directly. Visitor records and CSV
+export are unavailable until database access is restored. Save a corrected 
+`DATABASE_PATH` to retry immediately. Failed attempts keep settings accessible. A 
+successful retry opens or creates the database and re-enables check-in/check-out
+when you return Home. Existing records are not copied from the old database. Changing
+the path while a working database is already open still requires a full app restart.
 
-Android does not provide a dependable writable process working directory. Therefore this project interprets relative paths such as `./audit.log`, `./error.log`, and `./psni_sign_in.db` relative to the app's private internal files directory. Absolute paths are accepted by the resolver, but Android storage/scoped-storage permissions still apply.
+Android does not provide a dependable writable process working directory. Therefore
+this project interprets relative paths such as `./audit.log`, `./error.log`, and 
+`./psni_sign_in.db` relative to the app's private internal files directory. Absolute
+paths are accepted by the resolver, but Android storage/scoped-storage permissions
+still apply.
 
-In the Admin screen's Application tab, **View** beside `AUDIT_LOG_PATH` or
+In the Admin screen's Application tab, the **View** button beside `AUDIT_LOG_PATH` or
 `ERROR_LOG_PATH` opens that log in the default text-viewing app (or Android's app
 picker when no default is selected). Save edited paths first. The viewer receives
 temporary read-only access to the selected log. Missing or unreadable logs and a
@@ -77,13 +83,14 @@ Timestamp format: `yyyy-MM-dd HH:mm:ss`
 
 ## CSV behavior
 
-After every successful database **sign-in**, **sign-out**, or **admin edit**, the app queues a background export. The exporter rebuilds the complete current-year CSV and overwrites:
-
-`PSNI_Sign-In_Sheet_YYYY.csv`
+After every successful database **sign-in**, **sign-out**, or **admin edit**, the app queues a background write to a CSV file (`PSNI_Sign-In_Sheet_YYYY.csv`). The exporter rebuilds the complete current-year CSV and overwrites it. The 'YYYY' in the filename represents the current year, so this file will rollover to a new file name each year.
 
 CSV columns are exactly:
 
-`sign_in_datetime,sign_out_datetime,first_name,last_name`
+`sign_in_datetime,sign_out_datetime,first_name,last_name,visiting,reason`
+
+`visiting` contains who the visitor is visiting, and `reason` contains the reason
+for the visit. Missing values are exported as empty fields.
 
 SQLite is the source of truth. If SMB is unavailable, authentication fails, or the remote file cannot be written, the local transaction stays committed and the SMB problem is written to `error.log`.
 

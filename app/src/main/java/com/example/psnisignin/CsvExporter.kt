@@ -152,14 +152,14 @@ class CsvExporter(
     }
 
     /**
-     * Purpose: Convert database records to the exact four-column CSV format requested.
+     * Purpose: Convert database records to the six-column CSV format.
      * Inputs: records - rows to serialize.
      * Optional inputs: None.
      * Returns: UTF-8-ready CSV text including a header row.
      * Error handling: No expected recoverable errors; individual values are safely CSV-escaped.
      */
     private fun buildCsv(records: List<SignInRecord>): String = buildString {
-        appendLine("sign_in_datetime,sign_out_datetime,first_name,last_name")
+        appendLine("sign_in_datetime,sign_out_datetime,first_name,last_name,visiting,reason")
         records.forEach { record ->
             append(csvEscape(record.signInDateTime))
             append(',')
@@ -168,6 +168,10 @@ class CsvExporter(
             append(csvEscape(record.firstName))
             append(',')
             append(csvEscape(record.lastName))
+            append(',')
+            append(csvEscape(record.visiting ?: ""))
+            append(',')
+            append(csvEscape(record.reason ?: ""))
             append('\n')
         }
     }

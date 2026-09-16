@@ -122,6 +122,7 @@ class AdminListActivity : BaseHomeActivity() {
         setInput(R.id.errorLogPathInput, AppConfig.ERROR_LOG_PATH)
         setInput(R.id.timestampPatternInput, AppConfig.TIMESTAMP_PATTERN)
         setInput(R.id.adminPasscodeInput, AppConfig.ADMIN_PASSCODE)
+        updateDefaultPasscodeWarning()
         findViewById<CheckBox>(R.id.slackNotificationsEnabledInput).isChecked = AppConfig.SLACK_NOTIFICATIONS_ENABLED
         findViewById<Spinner>(R.id.slackNotificationTargetInput).apply {
             adapter = ArrayAdapter(
@@ -249,7 +250,13 @@ class AdminListActivity : BaseHomeActivity() {
         }
     }
 
-    /** Enable passcode editing, then validate and save exactly four digits. */
+    /** Show the warning until the saved passcode differs from the factory default. */
+    private fun updateDefaultPasscodeWarning() {
+        findViewById<View>(R.id.defaultPasscodeWarning).visibility =
+            if (AppConfig.ADMIN_PASSCODE == "1234") View.VISIBLE else View.GONE
+    }
+
+    /** Enable passcode editing, then save four digits other than the factory default. */
     private fun changePasscode() {
         val input = findViewById<EditText>(R.id.adminPasscodeInput)
         val button = findViewById<Button>(R.id.changePasscodeButton)
@@ -258,7 +265,7 @@ class AdminListActivity : BaseHomeActivity() {
             input.requestFocus()
             input.selectAll()
             button.text = "Save"
-            showSettingsMessage(R.id.adminMessageText, "Enter a new four-digit passcode.")
+            showSettingsMessage(R.id.adminMessageText, "Enter a new four-digit passcode. 1234 is not allowed.")
             return
         }
         val passcode = input.text.toString()
@@ -266,7 +273,12 @@ class AdminListActivity : BaseHomeActivity() {
             showSettingsMessage(R.id.adminMessageText, "The admin passcode must contain exactly four digits.", isError = true)
             return
         }
+        if (passcode == "1234") {
+            showSettingsMessage(R.id.adminMessageText, getString(R.string.default_admin_passcode_not_allowed), isError = true)
+            return
+        }
         AppConfig.ADMIN_PASSCODE = passcode
+        updateDefaultPasscodeWarning()
         input.isEnabled = false
         button.text = "Change"
         showSettingsMessage(R.id.adminMessageText, "Admin passcode changed.")
